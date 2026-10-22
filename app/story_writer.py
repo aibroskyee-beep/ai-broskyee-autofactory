@@ -11,6 +11,25 @@ Schema: {\"title\": string, \"description\": string, \"topic\": string, \"hook\"
 
 SUPPORTED = {"cloud","rocket","planet","phone","brain","heart","flower","robot","book","lightbulb","atom","plant","star","camera","water_drop","gear","magnet","globe","cube","sphere","cone","cylinder","torus"}
 EMOTIONS = {"curious","happy","worried","surprised","determined","relieved"}
+VISUAL_ALIASES = {
+    "waterdrop": "water_drop", "raindrop": "water_drop", "raindrops": "water_drop",
+    "water_droplet": "water_drop", "light_bulb": "lightbulb", "smartphone": "phone",
+    "mobile_phone": "phone", "cell_phone": "phone", "earth": "globe", "world": "globe",
+    "tree": "plant", "cog": "gear", "cogwheel": "gear", "gearwheel": "gear",
+    "donut": "torus", "ring": "torus", "orb": "sphere", "ball": "sphere", "box": "cube",
+    "person": "robot", "human": "robot", "android": "robot", "character": "robot"
+}
+
+def normalize_visual_type(value, fallback, scene_number, field_name, warnings):
+    raw = str(value or "").strip().lower()
+    token = re.sub(r"[\s-]+", "_", raw)
+    token = VISUAL_ALIASES.get(token, token)
+    if token in SUPPORTED:
+        return token
+    message = f"Scene {scene_number} {field_name} '{raw[:80]}' is unsupported; using '{fallback}'."
+    warnings.append(message)
+    print("WARNING: " + message, file=sys.stderr)
+    return fallback
 
 
 def call_local_model(model_path: Path, candidates: list[dict], retry_feedback: str = "") -> dict:
@@ -62,14 +81,13 @@ def validate(plan: dict, topic_candidates: list[dict]) -> dict:
     scenes = plan["scenes"]
     if not isinstance(scenes, list) or not 5 <= len(scenes) <= 8:
         raise ValueError("scenes must contain 5..8 scenes")
+    visual_warnings = []
     for i, scene in enumerate(scenes):
         for key in ("narration", "caption", "visual", "companion", "action", "emotion"):
             if key not in scene:
                 raise ValueError(f"Scene {i+1} missing {key}")
-        scene["visual"] = str(scene["visual"]).lower().strip()
-        scene["companion"] = str(scene["companion"]).lower().strip()
-        if scene["visual"] not in SUPPORTED or scene["companion"] not in SUPPORTED:
-            raise ValueError(f"Scene {i+1} uses an unsupported visual type")
+        scene["visual"] = normalize_visual_type(scene["visual"], "sphere", i + 1, "visual", visual_warnings)
+        scene["companion"] = normalize_visual_type(scene["companion"], "star", i + 1, "companion", visual_warnings)
         scene["caption"] = str(scene["caption"]).strip()[:34]
         scene["narration"] = str(scene["narration"]).strip()
         scene["emotion"] = str(scene["emotion"]).lower().strip()
@@ -78,6 +96,10 @@ def validate(plan: dict, topic_candidates: list[dict]) -> dict:
         scene["action"] = str(scene["action"]).strip()[:220]
     plan["tags"] = [str(x).strip().lstrip("#")[:30] for x in plan.get("tags", []) if str(x).strip()][:8]
     plan["source_candidates"] = [{"title":x.get("title", ""), "url":x.get("url", ""), "source":x.get("source", "")} for x in topic_candidates[:8]]
+    if visual_warnings:
+        plan["visual_validation_warnings"] = visual_warnings
+    else:
+        plan.pop("visual_validation_warnings", None)
     plan["generator"] = "Qwen2.5-1.5B-Instruct local GGUF (CPU; no API key)"
     return plan
 
