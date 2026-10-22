@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+.secrets/
+work/
+output/
+assets/voice/*.onnx
+assets/voice/*.onnx.json
+__pycache__/
+*.pyc
+test_output/

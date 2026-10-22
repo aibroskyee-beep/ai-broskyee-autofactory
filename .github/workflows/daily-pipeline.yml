@@ -1,0 +1,82 @@
+name: AI-Broskyee AutoFactory (free-only)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 19:00 Asia/Kolkata = 13:30 UTC. GitHub may start scheduled jobs a little late.
+    - cron: '30 13 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ai-broskyee-production
+  cancel-in-progress: false
+
+jobs:
+  create-check-publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 160
+    env:
+      AI_VIDEO_FACTORY_ROOT: ${{ github.workspace }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+      YT_CATEGORY_ID: '28'
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      IG_GRAPH_VERSION: ${{ vars.IG_GRAPH_VERSION || 'v26.0' }}
+      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      AUTO_PUBLISH_ENABLED: 'true'
+      PIPER_MODEL: ${{ github.workspace }}/assets/voice/en_US-lessac-medium.onnx
+
+    steps:
+      - name: Check out automation source
+        uses: actions/checkout@v4
+
+      - name: Install free open-source render and audio tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y blender ffmpeg curl
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt piper-tts
+          blender --version | head -n 2
+          ffmpeg -version | head -n 1
+          piper --help >/dev/null
+
+      - name: Download small English Piper voice model
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/voice
+          curl -fL --retry 2 --connect-timeout 20 \
+            'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx' \
+            -o assets/voice/en_US-lessac-medium.onnx
+          curl -fL --retry 2 --connect-timeout 20 \
+            'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json' \
+            -o assets/voice/en_US-lessac-medium.onnx.json
+          test -s assets/voice/en_US-lessac-medium.onnx
+          test -s assets/voice/en_US-lessac-medium.onnx.json
+
+      - name: Research, create, render, mix, quality-check and publish
+        shell: bash
+        run: python app/pipeline.py
+
+      - name: Save verified output and reports for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-broskyee-output-${{ github.run_id }}
+          path: |
+            output/final.mp4
+            output/quality-report.json
+            output/metadata.json
+            output/pipeline-status.json
+            output/publish-result.json
+            work/last_qa_failure.txt
+          if-no-files-found: ignore
+          retention-days: 1

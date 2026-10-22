@@ -1,0 +1,28 @@
+{
+  "project_name": "AI-Broskyee",
+  "language": "English",
+  "target_platforms": ["youtube_shorts", "instagram_reels"],
+  "auto_publish_enabled": true,
+  "max_quality_retries": 3,
+  "max_concurrent_jobs": 1,
+  "max_workspace_gb": 10,
+  "soft_limit_gb": 9,
+  "minimum_free_drive_gb": 15,
+  "delete_temp_only_after_verified_export": true,
+  "video": {
+    "width": 720,
+    "height": 1280,
+    "fps": 24,
+    "minimum_seconds": 20,
+    "maximum_seconds": 55,
+    "scene_count_min": 5,
+    "scene_count_max": 8
+  },
+  "publishing": {
+    "timezone": "Asia/Kolkata",
+    "initial_post_hour_ist": 19,
+    "instagram_api_version": "v26.0",
+    "youtube_privacy": "public"
+  },
+  "free_only": true
+}
