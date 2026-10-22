@@ -3,7 +3,7 @@
 A free-only starter pipeline for: trend feed scan → original short script/storyboard → procedural Blender 3D render → speech + generated music bed → MP4 technical QA → optional automatic publishing.
 
 ## Hard rules
-- No paid model fallback. AI text generation calls only OpenRouter's `openrouter/free` router when `OPENROUTER_API_KEY` is configured. If unavailable, the run stops or uses the explicitly labelled offline fallback; it never switches to a paid model.
+- No external AI API key is required. The workflow downloads a quantized Qwen2.5 1.5B GGUF model to the temporary public runner and runs it on CPU using llama.cpp. No paid model fallback exists; if model download or inference fails, the run stops.
 - Nothing in this package adds billing, enables a paid service, or publishes unless credentials are configured.
 - The renderer creates a new, original stylized 3D video. It does not copy the Zack D. Films video, script, characters, audio, or shots. Its visual quality is a prototype; it is not yet equivalent to the reference.
 - QA currently verifies decodeability, dimensions, duration, stream presence, black/frozen frames and audio levels. Automated QA cannot guarantee that every visual is semantically perfect; inspect early outputs.
@@ -12,17 +12,16 @@ A free-only starter pipeline for: trend feed scan → original short script/stor
 
 ## Local smoke test
 1. Install Blender and FFmpeg only if you choose to run locally. Your laptop is not the intended full-render machine.
-2. Set `OPENROUTER_API_KEY` in your local environment only if you already have a free-tier key. Do not paste keys into ChatGPT or commit them.
-3. Use `python app/scout.py --out work/trends.json` to test public feed discovery.
-4. Use `python app/story_writer.py --trends work/trends.json --out work/plan.json` to generate an original plan.
-5. Render using Blender: `blender --background --python app/render_story.py -- work/plan.json work/visual.mp4`.
-6. Generate narration/music with Piper installed and a compatible English voice model; see the workflow.
+2. Use `python app/scout.py --out work/trends.json` to test public feed discovery.
+3. Install `llama-cpp-python` and download the Qwen2.5-1.5B GGUF model before running `python app/story_writer.py --trends work/trends.json --out work/plan.json`.
+4. Render using Blender: `blender --background --python app/render_story.py -- work/plan.json work/visual.mp4`.
+5. Generate narration/music with Piper installed and a compatible English voice model; see the workflow.
 
 ## Free cloud route
-The included GitHub Actions workflow is meant for a separate public repository if you decide code visibility is acceptable. It runs once per day at 19:00 India time and can also be launched manually. This is not installed into or pushed to your private project by this package. Free quotas, services and provider eligibility can change; the workflow fails closed rather than switching to paid services.
+The included GitHub Actions workflow is for a separate public repository if you accept source-code visibility. It is manual-only during initial testing; we will enable a daily schedule only after the first output passes visual/audio review and official publishing is configured. Free quotas, services and provider eligibility can change; the workflow fails closed rather than switching to paid services.
 
 ## Publishing setup is a required one-time step
-- Add `OPENROUTER_API_KEY` only if the account has access to free models; no payment method is needed or should be added for this project.
+- AI story generation uses the local open model on the temporary runner, so no model API key or payment method is needed.
 - Add YouTube OAuth client/refresh-token secrets only after authorizing your own channel through the official Google flow.
 - Add Instagram Login API user ID and access token after authorizing your own Creator account through Meta's official developer flow.
 - Give the GitHub Actions token `contents: write` only in the separate publishing repo so it can create and delete a temporary release asset. Never include personal access tokens in source files.

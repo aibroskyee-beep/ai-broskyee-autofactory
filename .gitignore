@@ -9,3 +9,6 @@ assets/voice/*.onnx.json
 __pycache__/
 *.pyc
 test_output/
+
+# Downloaded ephemeral open model; never commit model weights.
+models/*.gguf
